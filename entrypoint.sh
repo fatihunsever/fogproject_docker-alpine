@@ -59,6 +59,7 @@ DB_user='${DB_USER}'
 DB_password='${DB_PASSWORD}'
 DB_external='yes'
 STORAGE_image_share_path='/images'
+PKI_san_dns_names='${FOG_SAN_NAMES:-fogserver}'
 EOF
 }
 

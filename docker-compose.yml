@@ -47,8 +47,11 @@ services:
     volumes:
       - fog-images:/images
       - fog-opt:/opt/fog
+      # FOG PKI (CA keys). Must persist together with /opt/fog.
+      - fog-etc:/etc/fog
 
 volumes:
   fog-db:
   fog-images:
   fog-opt:
+  fog-etc:
