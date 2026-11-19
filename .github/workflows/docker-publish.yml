@@ -1,0 +1,52 @@
+name: Publish image to GHCR
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      fog_version:
+        description: "FOG release tag to build (e.g. 1.6.0)"
+        required: false
+
+env:
+  FOG_VERSION: ${{ github.event.inputs.fog_version || '1.6.0.158' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # ghcr.io requires a lowercase image name
+      - name: Image name
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            FOG_VERSION=${{ env.FOG_VERSION }}
+          tags: |
+            ${{ steps.img.outputs.name }}:${{ env.FOG_VERSION }}
+            ${{ steps.img.outputs.name }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=FOG Project ${{ env.FOG_VERSION }} on Alpine
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
