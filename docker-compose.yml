@@ -1,0 +1,54 @@
+name: fog
+
+services:
+  db:
+    image: mariadb:lts
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set in .env}
+      MARIADB_DATABASE: ${DB_NAME:-fog}
+      MARIADB_USER: ${DB_USER:-fogmaster}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?set in .env}
+    volumes:
+      - fog-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  fog:
+    build:
+      context: .
+      args:
+        FOG_VERSION: ${FOG_VERSION:-1.6.0.158}
+    image: fog-alpine:${FOG_VERSION:-1.6.0.158}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FOG_IP: ${FOG_IP:?set to the Windows host LAN IP in .env}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-fog}
+      DB_USER: ${DB_USER:-fogmaster}
+      DB_PASSWORD: ${DB_PASSWORD:?set in .env}
+    # NFS server (kernel nfsd) needs this; see notes about WSL2 kernel support.
+    privileged: true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "69:69/udp"
+      - "21:21"
+      - "111:111/tcp"
+      - "111:111/udp"
+      - "2049:2049/tcp"
+      - "2049:2049/udp"
+    volumes:
+      - fog-images:/images
+      - fog-opt:/opt/fog
+
+volumes:
+  fog-db:
+  fog-images:
+  fog-opt:
